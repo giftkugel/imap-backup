@@ -11,7 +11,7 @@ public class Application {
     private static final Logger LOGGER = LoggerFactory.getLogger(Application.class);
 
     public static void main(String[] args) {
-        LOGGER.info("Info");
+        LOGGER.info("Info server={}, port={}, user={}", args[0], args[1], args[2]);
 
         Properties properties = new Properties();
         properties.setProperty("mail.imap.host", args[0]);
