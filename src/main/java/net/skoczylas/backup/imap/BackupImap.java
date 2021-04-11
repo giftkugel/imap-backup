@@ -68,8 +68,8 @@ public class BackupImap {
         MimeType mimeType = getMimeType(message.getContentType());
 
         if (mimeType != null) {
-            String from = Arrays.stream(message.getFrom()).map(String::valueOf).collect(Collectors.joining(", "));
-            String to = Arrays.stream(message.getAllRecipients()).map(String::valueOf).collect(Collectors.joining(", "));
+            String from = getAddresses(message.getFrom());
+            String to = getAddresses(message.getAllRecipients());
             LocalDateTime receivedDate = convertToLocalDateTimeViaInstant(message.getReceivedDate());
             MailInfo mailInfo = new MailInfo(folder.getName(), from, to, subject, receivedDate);
 
@@ -79,6 +79,17 @@ public class BackupImap {
             getContent(message).ifPresent(content -> readContent(content, mimeType, mailInfo));
 
             writeToFile(mailInfo);
+        }
+    }
+
+    private String getAddresses(Address... addresses) {
+        if (addresses != null) {
+            return Arrays.stream(addresses)
+                    .filter(Objects::nonNull)
+                    .map(String::valueOf)
+                    .collect(Collectors.joining(", "));
+        } else {
+            return "Unknown";
         }
     }
 
