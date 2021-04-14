@@ -1,5 +1,6 @@
 package net.skoczylas.backup.imap;
 
+import jakarta.activation.MimeType;
 import org.apache.commons.codec.digest.DigestUtils;
 
 import java.time.LocalDateTime;
@@ -12,25 +13,29 @@ public class MailInfo {
 
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-    private final String folder;
+    private final List<String> folder = new ArrayList<>();
     private final String from;
     private final String to;
     private final String subject;
     private final LocalDateTime receivedAt;
     private final String hash;
+    private final MimeType mimeType;
 
     private final List<String> attachments = new ArrayList<>();
 
-    public MailInfo(String folder, String from, String to, String subject, LocalDateTime receivedAt) {
-        this.folder = folder;
+    public MailInfo(List<String> folder, String from, String to, String subject, LocalDateTime receivedAt, MimeType mimeType) {
+        this.folder.addAll(folder);
         this.from = from;
         this.to = to;
         this.subject = subject;
         this.receivedAt = receivedAt;
-        this.hash = DigestUtils.sha256Hex(folder + receivedAt + subject + from + to);
+        this.mimeType = mimeType;
+
+        String folderList = String.join("/", this.folder);
+        this.hash = DigestUtils.sha256Hex(folderList + receivedAt + subject + from + to);
     }
 
-    public String getFolder() {
+    public List<String> getFolder() {
         return folder;
     }
 
@@ -58,10 +63,14 @@ public class MailInfo {
         attachments.add(fileName);
     }
     
-    public String asFormattedString(String separator) {
+    public String asFormattedString(String separator, boolean withMimeType) {
         StringBuilder builder = new StringBuilder();
-        builder.append(folder);
+        builder.append(String.join("/", this.folder));
         builder.append(separator);
+        if (withMimeType) {
+            builder.append(mimeType);
+            builder.append(separator);
+        }
         builder.append(getFormattedDate(receivedAt));
         builder.append(separator);
         builder.append("Subject: ");
@@ -93,12 +102,12 @@ public class MailInfo {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         MailInfo mailInfo = (MailInfo) o;
-        return Objects.equals(folder, mailInfo.folder) && Objects.equals(from, mailInfo.from) && Objects.equals(to, mailInfo.to) && Objects.equals(subject, mailInfo.subject) && Objects.equals(receivedAt, mailInfo.receivedAt) && Objects.equals(hash, mailInfo.hash);
+        return Objects.equals(folder, mailInfo.folder) && Objects.equals(from, mailInfo.from) && Objects.equals(to, mailInfo.to) && Objects.equals(subject, mailInfo.subject) && Objects.equals(receivedAt, mailInfo.receivedAt) && Objects.equals(mimeType, mailInfo.mimeType) && Objects.equals(hash, mailInfo.hash);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(folder, from, to, subject, receivedAt, hash);
+        return Objects.hash(folder, from, to, subject, receivedAt, mimeType, hash);
     }
 
     @Override
@@ -109,6 +118,7 @@ public class MailInfo {
                 ", to='" + to + '\'' +
                 ", subject='" + subject + '\'' +
                 ", receivedAt=" + receivedAt +
+                ", mimeType=" + mimeType +
                 ", hash='" + hash + '\'' +
                 '}';
     }

@@ -1,5 +1,6 @@
 package net.skoczylas.backup.imap;
 
+import com.sun.mail.imap.IMAPNestedMessage;
 import com.sun.mail.util.BASE64DecoderStream;
 import jakarta.activation.MimeType;
 import jakarta.activation.MimeTypeParameterList;
@@ -45,25 +46,38 @@ public class BackupImap {
 
         Folder[] folders = defaultFolder.list();
 
-        for (Folder folder : folders) {
-            readFolder(folder);
+        if (folders != null && folders.length > 0) {
+            for (Folder folder : folders) {
+                readFolder(folder, new ArrayList<>());
+            }
         }
 
         store.close();
     }
 
-    private void readFolder(Folder folder) throws MessagingException {
+    private void readFolder(Folder folder, List<String> parents) throws MessagingException {
         LOGGER.info("Opening folder {}", folder.getName());
         folder.open(Folder.READ_ONLY);
         Message[] messages = folder.getMessages();
 
+        parents.add(folder.getName());
         for (Message message : messages) {
-            readMessage(folder, (MimeMessage) message);
+            readMessage(parents, (MimeMessage) message);
         }
+
+        Folder[] subFolders = folder.list();
+        if (subFolders != null && subFolders.length > 0) {
+            for (Folder subFolder : subFolders) {
+                List<String> parentFolders = new ArrayList<>(parents);
+                readFolder(subFolder, parentFolders);
+            }
+        }
+
+
         folder.close();
     }
 
-    private void readMessage(Folder folder, MimeMessage message) throws MessagingException {
+    private void readMessage(List<String> parents, MimeMessage message) throws MessagingException {
         String subject = getSubject(message);
         MimeType mimeType = getMimeType(message.getContentType());
 
@@ -71,11 +85,11 @@ public class BackupImap {
             String from = getAddresses(message.getFrom());
             String to = getAddresses(message.getAllRecipients());
             LocalDateTime receivedDate = convertToLocalDateTimeViaInstant(message.getReceivedDate());
-            MailInfo mailInfo = new MailInfo(folder.getName(), from, to, subject, receivedDate);
+            MailInfo mailInfo = new MailInfo(parents, from, to, subject, receivedDate, mimeType);
 
             mailCount++;
 
-            LOGGER.info("Reading message {}, {}", mailCount, mailInfo.asFormattedString(", "));
+            LOGGER.info("Reading message {}, {}", mailCount, mailInfo.asFormattedString(", ", false));
             getContent(message).ifPresent(content -> readContent(content, mimeType, mailInfo));
 
             writeToFile(mailInfo);
@@ -89,6 +103,7 @@ public class BackupImap {
                     .map(String::valueOf)
                     .collect(Collectors.joining(", "));
         } else {
+            LOGGER.warn("Could not read addresses");
             return "Unknown";
         }
     }
@@ -97,6 +112,7 @@ public class BackupImap {
         try {
             return new MimeType(contentType);
         } catch (MimeTypeParseException exception) {
+            LOGGER.warn("Could not determinate content type: {}", exception.getMessage());
             return null;
         }
     }
@@ -127,21 +143,36 @@ public class BackupImap {
                     LOGGER.error("Failed", exception);
                 }
             }
-        } else if ("application".equals(mimeType.getPrimaryType()) && "octet-stream".equals(mimeType.getSubType())) {
-            getFileName(mimeType).ifPresent(fileName -> {
-                LOGGER.info("Downloading attachment {}!", fileName);
-                mailInfo.addAttachment(fileName);
-                if (content instanceof BASE64DecoderStream) {
-                    BASE64DecoderStream decoderStream = (BASE64DecoderStream) content;
-                    writeToFile(decoderStream, mailInfo, fileName);
-                }
-            });
+        } else if (content instanceof BASE64DecoderStream) {
+            getFileName(mimeType)
+                    .filter(StringUtils::isNotBlank)
+                    .ifPresentOrElse(fileName -> {
+                        LOGGER.info("Downloading attachment: {}", fileName);
+                        mailInfo.addAttachment(fileName);
+                        BASE64DecoderStream decoderStream = (BASE64DecoderStream) content;
+                        writeToFile(decoderStream, mailInfo, fileName);
+                    }, () -> {
+                        LOGGER.warn("Skipped attachment type: {}", mimeType);
+                    });
+        }else if (content instanceof IMAPNestedMessage) {
+            LOGGER.warn("Skipping nested E-Mail");
         } else if ("text".equals(mimeType.getPrimaryType()) && "plain".equals(mimeType.getSubType())) {
             String contentText = String.valueOf(content);
-            writeToFile(contentText, mailInfo, "txt");
-        }  else if ("text".equals(mimeType.getPrimaryType()) && "html".equals(mimeType.getSubType())) {
+            writeToFile(contentText, mailInfo, "mail_content.txt");
+        } else if ("text".equals(mimeType.getPrimaryType()) && "html".equals(mimeType.getSubType())) {
             String contentText = String.valueOf(content);
-            writeToFile(contentText, mailInfo, "html");
+            writeToFile(contentText, mailInfo, "mail_content.html");
+        } else {
+            getFileName(mimeType)
+                .filter(StringUtils::isNotBlank)
+                .ifPresentOrElse(fileName -> {
+                    LOGGER.info("Downloading named content: {}, {}", fileName, mimeType);
+                    mailInfo.addAttachment(fileName);
+                    String contentText = String.valueOf(content);
+                    writeToFile(contentText, mailInfo, fileName);
+                }, () -> {
+                    LOGGER.warn("Skipped content type: {}", mimeType);
+                });
         }
     }
 
@@ -162,7 +193,7 @@ public class BackupImap {
             String collectedFileName = sepNames.keySet().stream().sorted().map(sepNames::get).collect(Collectors.joining());
             return Optional.of(cleanUp(collectedFileName));
         }
-        if (StringUtils.isNoneEmpty(fileName)) {
+        if (StringUtils.isNotBlank(fileName)) {
             return Optional.of(cleanUp(fileName));
         }
 
@@ -170,23 +201,31 @@ public class BackupImap {
     }
 
     private String cleanUp(String value) {
-        return value.replaceAll("[^a-zA-Z0-9_.-]", "");
+        return value.replaceAll("[^a-zA-Z0-9_.ÄÖÜäöüß+-]", "");
     }
 
     private Path getPath(MailInfo mailInfo) {
-        LocalDateTime receivedDate = mailInfo.getReceivedAt();
-        String hash = mailInfo.getHash();
-        String yearFolder = YEAR_FORMATTER.format(receivedDate);
-        String monthDayFolder = MONTH_FORMATTER.format(receivedDate);
-        return Paths.get(System.getProperty("user.home"), "backupImap", mailInfo.getFolder(), yearFolder, monthDayFolder, hash);
+        return Paths.get(System.getProperty("user.home"), getPathAsArray(mailInfo, true));
     }
 
     private Path getRelativePath(MailInfo mailInfo) {
+        return Paths.get("", getPathAsArray(mailInfo, false));
+    }
+
+    private String[] getPathAsArray(MailInfo mailInfo, boolean root) {
         LocalDateTime receivedDate = mailInfo.getReceivedAt();
         String hash = mailInfo.getHash();
         String yearFolder = YEAR_FORMATTER.format(receivedDate);
         String monthDayFolder = MONTH_FORMATTER.format(receivedDate);
-        return Paths.get(mailInfo.getFolder(), yearFolder, monthDayFolder, hash);
+        List<String> folder = new ArrayList<>();
+        if (root) {
+            folder.add("backupImap");
+        }
+        folder.addAll(mailInfo.getFolder());
+        folder.add(yearFolder);
+        folder.add(monthDayFolder);
+        folder.add(hash);
+        return folder.toArray(new String[0]);
     }
 
     private void writeToFile(InputStream content, MailInfo mailInfo, String fileName) {
@@ -207,14 +246,14 @@ public class BackupImap {
         }
     }
 
-    private void writeToFile(String content, MailInfo mailInfo, String extension) {
+    private void writeToFile(String content, MailInfo mailInfo, String fileName) {
         Path path = getPath(mailInfo);
         try {
             Files.createDirectories(path);
-            Path file = Paths.get(path.toString(), String.format("mail_content.%s", extension));
+            Path file = Paths.get(path.toString(), fileName);
             Path infoFile = Paths.get(path.toString(), "mail_info.txt");
             if (!Files.exists(infoFile)) {
-                Files.writeString(infoFile, mailInfo.asFormattedString(System.lineSeparator()), StandardOpenOption.CREATE_NEW);
+                Files.writeString(infoFile, mailInfo.asFormattedString(System.lineSeparator(), true), StandardOpenOption.CREATE_NEW);
             }
             if (!Files.exists(file)) {
                 Files.writeString(file, content, StandardOpenOption.CREATE_NEW);
@@ -234,9 +273,9 @@ public class BackupImap {
                 Files.writeString(infoFile, "<!DOCTYPE html>", StandardOpenOption.CREATE_NEW);
             }
             Files.writeString(infoFile, String.format("<a href=\"%s\">", FilenameUtils.separatorsToUnix(mailPath.toString())), StandardOpenOption.APPEND);
-            Files.writeString(infoFile, mailInfo.asFormattedString(", "), StandardOpenOption.APPEND);
+            Files.writeString(infoFile, mailInfo.asFormattedString(", ", false), StandardOpenOption.APPEND);
             Files.writeString(infoFile, "</a>", StandardOpenOption.APPEND);
-            Files.writeString(infoFile, "<br>", StandardOpenOption.APPEND);
+            Files.writeString(infoFile, "<br />", StandardOpenOption.APPEND);
             Files.writeString(infoFile, System.lineSeparator(), StandardOpenOption.APPEND);
         } catch (IOException exception) {
             LOGGER.error("Failed", exception);
