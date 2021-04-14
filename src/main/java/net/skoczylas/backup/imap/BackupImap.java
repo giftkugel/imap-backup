@@ -11,6 +11,8 @@ import jakarta.mail.internet.MimeMultipart;
 import jakarta.mail.internet.MimeUtility;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.tika.mime.MimeTypeException;
+import org.apache.tika.mime.MimeTypes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -118,8 +120,11 @@ public class BackupImap {
     }
 
     private String getSubject(Message message) {
+
         try {
-            return MimeUtility.decodeText(message.getSubject());
+            if (StringUtils.isNotBlank(message.getSubject())) {
+                return MimeUtility.decodeText(message.getSubject());
+            }
         } catch (MessagingException | UnsupportedEncodingException exception) {
             LOGGER.error("Failed", exception);
         }
@@ -152,7 +157,17 @@ public class BackupImap {
                         BASE64DecoderStream decoderStream = (BASE64DecoderStream) content;
                         writeToFile(decoderStream, mailInfo, fileName);
                     }, () -> {
-                        LOGGER.warn("Skipped attachment type: {}", mimeType);
+                        MimeTypes allTypes = MimeTypes.getDefaultMimeTypes();
+                        try {
+                            org.apache.tika.mime.MimeType detectedMimeType = allTypes.forName(mimeType.getBaseType());
+                            String fileName = UUID.randomUUID() + detectedMimeType.getExtension();
+                            LOGGER.info("Downloading unnamed attachment: {}", fileName);
+                            mailInfo.addAttachment(fileName);
+                            BASE64DecoderStream decoderStream = (BASE64DecoderStream) content;
+                            writeToFile(decoderStream, mailInfo, fileName);
+                        } catch (MimeTypeException exception) {
+                            LOGGER.warn("Skipped unnamed attachment, type: {}, because: {}", mimeType, exception.getMessage());
+                        }
                     });
         }else if (content instanceof IMAPNestedMessage) {
             LOGGER.warn("Skipping nested E-Mail");
@@ -171,7 +186,17 @@ public class BackupImap {
                     String contentText = String.valueOf(content);
                     writeToFile(contentText, mailInfo, fileName);
                 }, () -> {
-                    LOGGER.warn("Skipped content type: {}", mimeType);
+                    MimeTypes allTypes = MimeTypes.getDefaultMimeTypes();
+                    try {
+                        org.apache.tika.mime.MimeType detectedMimeType = allTypes.forName(mimeType.getBaseType());
+                        String fileName = UUID.randomUUID() + detectedMimeType.getExtension();
+                        LOGGER.info("Downloading unnamed content: {}", fileName);
+                        mailInfo.addAttachment(fileName);
+                        String contentText = String.valueOf(content);
+                        writeToFile(contentText, mailInfo, fileName);
+                    } catch (MimeTypeException exception) {
+                        LOGGER.warn("Skipped unnamed content, type: {}, because: {}", mimeType, exception.getMessage());
+                    }
                 });
         }
     }
@@ -271,11 +296,10 @@ public class BackupImap {
             Path infoFile = Paths.get(path.toString(), "mail_index.html");
             if (!Files.exists(infoFile)) {
                 Files.writeString(infoFile, "<!DOCTYPE html>", StandardOpenOption.CREATE_NEW);
+                Files.writeString(infoFile, "<table>", StandardOpenOption.APPEND);
+                Files.writeString(infoFile, "<tr><th>Folder</th><th>Date</th><th>Subject</th><th>From</th><th>To</th><th>Attachments</th></tr>", StandardOpenOption.APPEND);
             }
-            Files.writeString(infoFile, String.format("<a href=\"%s\">", FilenameUtils.separatorsToUnix(mailPath.toString())), StandardOpenOption.APPEND);
-            Files.writeString(infoFile, mailInfo.asFormattedString(", ", false), StandardOpenOption.APPEND);
-            Files.writeString(infoFile, "</a>", StandardOpenOption.APPEND);
-            Files.writeString(infoFile, "<br />", StandardOpenOption.APPEND);
+            Files.writeString(infoFile, mailInfo.asHTMLTableString(FilenameUtils.separatorsToUnix(mailPath.toString())), StandardOpenOption.APPEND);
             Files.writeString(infoFile, System.lineSeparator(), StandardOpenOption.APPEND);
         } catch (IOException exception) {
             LOGGER.error("Failed", exception);

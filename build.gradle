@@ -17,6 +17,8 @@ dependencies {
     implementation "org.apache.commons:commons-lang3:${apacheCommonsVersion}"
     implementation "commons-codec:commons-codec:${commonCodecVersion}"
     implementation "commons-io:commons-io:${commonsIOVersion}"
+    implementation "org.apache.tika:tika-core:${tikaCoreVersion}"
+
 
     implementation "com.sun.mail:jakarta.mail:${jakartaMailVersion}"
 

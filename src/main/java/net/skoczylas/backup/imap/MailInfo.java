@@ -74,7 +74,7 @@ public class MailInfo {
         builder.append(getFormattedDate(receivedAt));
         builder.append(separator);
         builder.append("Subject: ");
-        builder.append(String.format("'%s'", subject));
+        builder.append(subject);
         builder.append(separator);
         builder.append("From: ");
         builder.append(from);
@@ -86,6 +86,37 @@ public class MailInfo {
             builder.append("Attachments: ");
             builder.append(String.join(", ", attachments));
         }
+        return builder.toString();
+    }
+
+    public String asHTMLTableString(String link) {
+        StringBuilder builder = new StringBuilder();
+        builder.append("<tr><td nowrap>");
+        builder.append(String.join("/", this.folder));
+        builder.append("</td>");
+        builder.append("<td nowrap>");
+        builder.append(getFormattedDate(receivedAt));
+        builder.append("</td>");
+        builder.append("<td nowrap><a href=\"");
+        builder.append(link);
+        builder.append("\">");
+        builder.append(subject);
+        builder.append("</a>");
+        builder.append("</td>");
+        builder.append("<td>");
+        builder.append(from);
+        builder.append("</td>");
+        builder.append("<td>");
+        builder.append(to);
+        builder.append("</td>");
+        if (!attachments.isEmpty()) {
+            builder.append("<td>");
+            builder.append(String.join(", ", attachments));
+            builder.append("</td>");
+        } else {
+            builder.append("<td>&nbsp;</td>");
+        }
+        builder.append("</tr>");
         return builder.toString();
     }
 
