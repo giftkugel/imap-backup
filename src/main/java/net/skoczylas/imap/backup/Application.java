@@ -21,11 +21,9 @@ public class Application {
         properties.setProperty("mail.imap.ssl.enable", "true");
 
         Session session = Session.getDefaultInstance(properties);
-        try {
-            ImapBackup.init(session, args[2], args[3]);
-        } catch (MessagingException exception) {
-            LOGGER.error("Failed", exception);
-        }
+        ImapBackup imapBackup = new ImapBackup(session, args[2], args[3]);
+
+        imapBackup.run();
     }
 
 }

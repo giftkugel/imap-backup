@@ -5,17 +5,15 @@ import org.apache.commons.codec.digest.DigestUtils;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 public class MailInfo {
 
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-    private final List<String> folder = new ArrayList<>();
-    private final String from;
-    private final String to;
+    private final Deque<String> folder = new ArrayDeque<>();
+    private final List<String> from;
+    private final List<String> to;
     private final String subject;
     private final LocalDateTime receivedAt;
     private final String hash;
@@ -23,7 +21,7 @@ public class MailInfo {
 
     private final List<String> attachments = new ArrayList<>();
 
-    public MailInfo(List<String> folder, String from, String to, String subject, LocalDateTime receivedAt, MimeType mimeType) {
+    public MailInfo(Deque<String> folder, List<String> from, List<String> to, String subject, LocalDateTime receivedAt, MimeType mimeType) {
         this.folder.addAll(folder);
         this.from = from;
         this.to = to;
@@ -35,15 +33,15 @@ public class MailInfo {
         this.hash = DigestUtils.sha256Hex(folderList + receivedAt + subject + from + to);
     }
 
-    public List<String> getFolder() {
+    public Deque<String> getFolder() {
         return folder;
     }
 
-    public String getFrom() {
+    public List<String> getFrom() {
         return from;
     }
 
-    public String getTo() {
+    public List<String> getTo() {
         return to;
     }
 
