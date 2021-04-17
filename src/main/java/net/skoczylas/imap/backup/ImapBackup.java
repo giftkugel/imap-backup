@@ -1,4 +1,4 @@
-package net.skoczylas.backup.imap;
+package net.skoczylas.imap.backup;
 
 import com.sun.mail.imap.IMAPNestedMessage;
 import com.sun.mail.util.BASE64DecoderStream;
@@ -27,19 +27,19 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class BackupImap {
+public class ImapBackup {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(BackupImap.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ImapBackup.class);
     private static final DateTimeFormatter YEAR_FORMATTER = DateTimeFormatter.ofPattern("yyyy");
     private static final DateTimeFormatter MONTH_FORMATTER = DateTimeFormatter.ofPattern("MM_dd");
 
     public static void init(Session session, String username, String password) throws MessagingException {
-        new BackupImap(session, username, password);
+        new ImapBackup(session, username, password);
     }
 
     private int mailCount = 0;
 
-    BackupImap(Session session, String username, String password) throws MessagingException {
+    ImapBackup(Session session, String username, String password) throws MessagingException {
         Store store = session.getStore("imap");
         LOGGER.info("Connecting as user {}", username);
         store.connect(username, password);

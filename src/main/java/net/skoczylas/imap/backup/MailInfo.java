@@ -1,4 +1,4 @@
-package net.skoczylas.backup.imap;
+package net.skoczylas.imap.backup;
 
 import jakarta.activation.MimeType;
 import org.apache.commons.codec.digest.DigestUtils;

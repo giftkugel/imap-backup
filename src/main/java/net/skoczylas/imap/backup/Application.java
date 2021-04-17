@@ -1,4 +1,4 @@
-package net.skoczylas.backup.imap;
+package net.skoczylas.imap.backup;
 
 import jakarta.mail.*;
 import org.slf4j.Logger;
@@ -22,7 +22,7 @@ public class Application {
 
         Session session = Session.getDefaultInstance(properties);
         try {
-            BackupImap.init(session, args[2], args[3]);
+            ImapBackup.init(session, args[2], args[3]);
         } catch (MessagingException exception) {
             LOGGER.error("Failed", exception);
         }
