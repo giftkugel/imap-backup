@@ -1,7 +1,8 @@
 // https://github.com/mike-neck/graalvm-native-image-plugin
 plugins {
     id 'java'
-    id 'org.mikeneck.graalvm-native-image' version 'v1.3.0'
+    id 'application'
+    id 'org.mikeneck.graalvm-native-image' version "${graalVMNativeImageVersion}"
 }
 
 group 'net.skoczylas'
@@ -11,6 +12,9 @@ repositories {
     mavenCentral()
 }
 
+sourceCompatibility = 11
+targetCompatibility = 11
+
 dependencies {
     implementation "org.slf4j:slf4j-api:${slf4jVersion}"
     implementation "org.slf4j:slf4j-simple:${slf4jVersion}"
@@ -18,7 +22,7 @@ dependencies {
     implementation "commons-codec:commons-codec:${commonCodecVersion}"
     implementation "commons-io:commons-io:${commonsIOVersion}"
     implementation "org.apache.tika:tika-core:${tikaCoreVersion}"
-
+    implementation "org.freemarker:freemarker:${freeMarkerVersion}"
 
     implementation "com.sun.mail:jakarta.mail:${jakartaMailVersion}"
 

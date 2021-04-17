@@ -254,7 +254,7 @@ public class BackupImap {
     }
 
     private String cleanUp(String value) {
-        return value.replaceAll("[^a-zA-Z0-9_.ÄÖÜäöüß+-]", "_");
+        return value.replaceAll("[^\\sa-zA-Z0-9_.ÄÖÜäöüß+-]", "_").replaceAll("(\\r|\\n|\\t)", "");
     }
 
     private Path getPath(MailInfo mailInfo) {
