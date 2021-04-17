@@ -18,12 +18,15 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
 class Utility {
     
     private static final Logger LOGGER = LoggerFactory.getLogger(Utility.class);
+
+    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     static Optional<Object> getContent(Message message) {
         try {
@@ -121,6 +124,10 @@ class Utility {
         return dateToConvert.toInstant()
                 .atZone(ZoneId.systemDefault())
                 .toLocalDateTime();
+    }
+
+    static String getDate(LocalDateTime localDateTime) {
+        return FORMATTER.format(localDateTime);
     }
 
     private static MailAddress toMailAddress(InternetAddress address) {

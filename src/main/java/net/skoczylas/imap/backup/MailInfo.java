@@ -4,13 +4,11 @@ import jakarta.activation.MimeType;
 import org.apache.commons.codec.digest.DigestUtils;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 public class MailInfo {
 
-    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-
+    private final int number;
     private final Deque<String> folder = new ArrayDeque<>();
     private final List<MailAddress> from;
     private final List<MailAddress> to;
@@ -21,7 +19,8 @@ public class MailInfo {
 
     private final List<String> attachments = new ArrayList<>();
 
-    public MailInfo(Deque<String> folder, List<MailAddress> from, List<MailAddress> to, String subject, LocalDateTime receivedAt, MimeType mimeType) {
+    public MailInfo(int number, Deque<String> folder, List<MailAddress> from, List<MailAddress> to, String subject, LocalDateTime receivedAt, MimeType mimeType) {
+        this.number = number;
         this.folder.addAll(folder);
         this.from = from;
         this.to = to;
@@ -31,6 +30,10 @@ public class MailInfo {
 
         String folderList = String.join("/", this.folder);
         this.hash = DigestUtils.sha256Hex(folderList + receivedAt + subject + from + to);
+    }
+
+    public int getNumber() {
+        return number;
     }
 
     public Deque<String> getFolder() {
@@ -57,75 +60,18 @@ public class MailInfo {
         return hash;
     }
 
+    public MimeType getMimeType() {
+        return mimeType;
+    }
+
+    public List<String> getAttachments() {
+        return attachments;
+    }
+
     public void addAttachment(String fileName) {
         attachments.add(fileName);
     }
     
-    public String asFormattedString(String separator, boolean withMimeType) {
-        StringBuilder builder = new StringBuilder();
-        builder.append(String.join("/", this.folder));
-        builder.append(separator);
-        if (withMimeType) {
-            builder.append(mimeType);
-            builder.append(separator);
-        }
-        builder.append(getFormattedDate(receivedAt));
-        builder.append(separator);
-        builder.append("Subject: ");
-        builder.append(subject);
-        builder.append(separator);
-        builder.append("From: ");
-        builder.append(from);
-        builder.append(separator);
-        builder.append("To: ");
-        builder.append(to);
-        if (!attachments.isEmpty()) {
-            builder.append(separator);
-            builder.append("Attachments: ");
-            builder.append(String.join(", ", attachments));
-        }
-        return builder.toString();
-    }
-
-    public String asHTMLTableString(String link) {
-        StringBuilder builder = new StringBuilder();
-        builder.append("<tr><td nowrap>");
-        builder.append(String.join("/", this.folder));
-        builder.append("</td>");
-        builder.append("<td nowrap>");
-        builder.append(getFormattedDate(receivedAt));
-        builder.append("</td>");
-        builder.append("<td nowrap><a href=\"");
-        builder.append(link);
-        builder.append("\">");
-        builder.append(subject);
-        builder.append("</a>");
-        builder.append("</td>");
-        builder.append("<td>");
-        builder.append(from);
-        builder.append("</td>");
-        builder.append("<td>");
-        builder.append(to);
-        builder.append("</td>");
-        if (!attachments.isEmpty()) {
-            builder.append("<td>");
-            builder.append(String.join(", ", attachments));
-            builder.append("</td>");
-        } else {
-            builder.append("<td>&nbsp;</td>");
-        }
-        builder.append("</tr>");
-        return builder.toString();
-    }
-
-    private String getFormattedDate(LocalDateTime localDateTime) {
-        if (localDateTime != null) {
-            return FORMATTER.format(localDateTime);
-        } else {
-            return "";
-        }
-    }
-
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -142,13 +88,15 @@ public class MailInfo {
     @Override
     public String toString() {
         return "MailInfo{" +
-                "folder='" + folder + '\'' +
-                ", from='" + from + '\'' +
-                ", to='" + to + '\'' +
+                "number=" + number +
+                ", folder=" + folder +
+                ", from=" + from +
+                ", to=" + to +
                 ", subject='" + subject + '\'' +
                 ", receivedAt=" + receivedAt +
-                ", mimeType=" + mimeType +
                 ", hash='" + hash + '\'' +
+                ", mimeType=" + mimeType +
+                ", attachments=" + attachments +
                 '}';
     }
 }

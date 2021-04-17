@@ -21,12 +21,16 @@ public class ImapBackup {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ImapBackup.class);
 
+    private final List<MailInfo> mailQueue;
+    private final Writer writer;
+
     private Store store;
-    private Writer writer;
     private int mailCount = 0;
 
-    public ImapBackup(Session session, String username, String password) {
-        this.writer = new Writer("imapBackup");
+    public ImapBackup(Session session, String username, String password) throws IOException {
+        this.mailQueue = new ArrayList<>();
+        this.writer = new Writer(mailQueue, System.getProperty("user.home"), "imapBackup", username);
+
         try {
             this.store = session.getStore("imap");
             LOGGER.info("Connecting as user {}", username);
@@ -34,11 +38,11 @@ public class ImapBackup {
         } catch (MessagingException exception) {
             LOGGER.error("Connection failed: {}", exception.getMessage());
         }
-
     }
 
     public void run() {
         if (store.isConnected()) {
+            writer.run();
             try {
                 Folder defaultFolder = store.getDefaultFolder();
                 List<Folder> folders = Arrays.asList(defaultFolder.list());
@@ -95,18 +99,20 @@ public class ImapBackup {
             MimeType mimeType = Utility.getMimeType(message.getContentType()).orElse(null);
 
             if (mimeType != null) {
-                List<MailAddress> from = Utility.getAddresses(message.getFrom());
-                List<MailAddress> to = Utility.getAddresses(message.getAllRecipients());
-                LocalDateTime receivedDate = Utility.convertToLocalDateTimeViaInstant(message.getReceivedDate());
-                MailInfo mailInfo = new MailInfo(parents, from, to, subject, receivedDate, mimeType);
 
                 mailCount++;
 
-                LOGGER.info("Reading message {}, {}", mailCount, mailInfo.asFormattedString(", ", false));
+                List<MailAddress> from = Utility.getAddresses(message.getFrom());
+                List<MailAddress> to = Utility.getAddresses(message.getAllRecipients());
+                LocalDateTime receivedDate = Utility.convertToLocalDateTimeViaInstant(message.getReceivedDate());
+                MailInfo mailInfo = new MailInfo(mailCount, parents, from, to, subject, receivedDate, mimeType);
+                mailQueue.add(mailInfo);
+
+                String fromAddress = mailInfo.getFrom().stream().findFirst().map(MailAddress::getValidAddress).orElse("Unknown");
+                LOGGER.info("Reading message {}, {}, subject={}, from={}", mailCount, Utility.getDate(mailInfo.getReceivedAt()), mailInfo.getSubject(), fromAddress);
                 Utility.getContent(message)
                         .ifPresent(content -> readContent(content, mimeType, mailInfo));
 
-                writer.writeToFile(mailInfo);
             }
         } catch (MessagingException exception) {
             LOGGER.error("Could not read message: {}", exception.getMessage());
@@ -123,6 +129,7 @@ public class ImapBackup {
             return;
         }
         LOGGER.debug("Reading content with type={}", mimeType);
+        writer.writeInfoFile(mailInfo);
         if (content instanceof MimeMultipart) {
             handleMultipart((MimeMultipart) content, mailInfo);
         } else if (content instanceof BASE64DecoderStream) {

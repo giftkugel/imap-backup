@@ -4,6 +4,7 @@ import jakarta.mail.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.Properties;
 
 public class Application {
@@ -21,9 +22,15 @@ public class Application {
         properties.setProperty("mail.imap.ssl.enable", "true");
 
         Session session = Session.getDefaultInstance(properties);
-        ImapBackup imapBackup = new ImapBackup(session, args[2], args[3]);
 
-        imapBackup.run();
+        try {
+            ImapBackup imapBackup = new ImapBackup(session, args[2], args[3]);
+            imapBackup.run();
+        } catch (IOException exception) {
+            LOGGER.error("Could not start backup: {}", exception.getMessage());
+        }
+
+
     }
 
 }

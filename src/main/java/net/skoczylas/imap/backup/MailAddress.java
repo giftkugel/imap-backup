@@ -28,6 +28,16 @@ public class MailAddress {
         this.encodedAddress = encodedAddress;
     }
 
+    public String getValidAddress() {
+        if (encodedAddress != null) {
+            return encodedAddress;
+        } else if (address != null) {
+            return address;
+        } else {
+            return "Unknown";
+        }
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -43,9 +53,20 @@ public class MailAddress {
 
     @Override
     public String toString() {
-        return "MailAddress{" +
-                "address='" + address + '\'' +
-                ", encodedAddress='" + encodedAddress + '\'' +
-                '}';
+        StringBuilder builder = new StringBuilder();
+
+        if (encodedAddress != null) {
+            builder.append(encodedAddress);
+        }
+
+        if (address != null && encodedAddress != null) {
+            builder.append(" <");
+            builder.append(address);
+            builder.append(">");
+        } else if (address != null) {
+            builder.append(address);
+        }
+
+        return builder.toString();
     }
 }
