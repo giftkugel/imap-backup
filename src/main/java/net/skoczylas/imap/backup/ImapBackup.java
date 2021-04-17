@@ -97,8 +97,8 @@ public class ImapBackup {
             MimeType mimeType = Utility.getMimeType(message.getContentType()).orElse(null);
 
             if (mimeType != null) {
-                List<String> from = Utility.getAddresses(message.getFrom());
-                List<String> to = Utility.getAddresses(message.getAllRecipients());
+                List<MailAddress> from = Utility.getAddresses(message.getFrom());
+                List<MailAddress> to = Utility.getAddresses(message.getAllRecipients());
                 LocalDateTime receivedDate = Utility.convertToLocalDateTimeViaInstant(message.getReceivedDate());
                 MailInfo mailInfo = new MailInfo(parents, from, to, subject, receivedDate, mimeType);
 

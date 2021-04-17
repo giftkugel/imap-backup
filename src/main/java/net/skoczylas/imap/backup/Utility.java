@@ -7,6 +7,7 @@ import jakarta.mail.Address;
 import jakarta.mail.Message;
 import jakarta.mail.MessagingException;
 import jakarta.mail.Part;
+import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMultipart;
 import jakarta.mail.internet.MimeUtility;
 import org.apache.commons.lang3.StringUtils;
@@ -53,11 +54,13 @@ class Utility {
         return  0;
     }
 
-    static List<String> getAddresses(Address... addresses) {
+    static List<MailAddress> getAddresses(Address... addresses) {
         if (addresses != null) {
             return Arrays.stream(addresses)
                     .filter(Objects::nonNull)
-                    .map(String::valueOf)
+                    .filter(InternetAddress.class::isInstance)
+                    .map(InternetAddress.class::cast)
+                    .map(Utility::toMailAddress)
                     .collect(Collectors.toList());
         } else {
             LOGGER.warn("Could not read addresses");
@@ -118,6 +121,10 @@ class Utility {
         return dateToConvert.toInstant()
                 .atZone(ZoneId.systemDefault())
                 .toLocalDateTime();
+    }
+
+    private static MailAddress toMailAddress(InternetAddress address) {
+        return new MailAddress(address.getAddress(), address.getPersonal());
     }
 
 }

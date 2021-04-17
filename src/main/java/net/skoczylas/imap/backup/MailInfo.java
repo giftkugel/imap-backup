@@ -12,8 +12,8 @@ public class MailInfo {
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private final Deque<String> folder = new ArrayDeque<>();
-    private final List<String> from;
-    private final List<String> to;
+    private final List<MailAddress> from;
+    private final List<MailAddress> to;
     private final String subject;
     private final LocalDateTime receivedAt;
     private final String hash;
@@ -21,7 +21,7 @@ public class MailInfo {
 
     private final List<String> attachments = new ArrayList<>();
 
-    public MailInfo(Deque<String> folder, List<String> from, List<String> to, String subject, LocalDateTime receivedAt, MimeType mimeType) {
+    public MailInfo(Deque<String> folder, List<MailAddress> from, List<MailAddress> to, String subject, LocalDateTime receivedAt, MimeType mimeType) {
         this.folder.addAll(folder);
         this.from = from;
         this.to = to;
@@ -37,11 +37,11 @@ public class MailInfo {
         return folder;
     }
 
-    public List<String> getFrom() {
+    public List<MailAddress> getFrom() {
         return from;
     }
 
-    public List<String> getTo() {
+    public List<MailAddress> getTo() {
         return to;
     }
 
