@@ -41,8 +41,6 @@ public class ImapBackup {
         if (store.isConnected()) {
             try {
                 Folder defaultFolder = store.getDefaultFolder();
-                LOGGER.info("Default folder: {}", defaultFolder);
-
                 List<Folder> folders = Arrays.asList(defaultFolder.list());
 
                 String folderNames = folders.stream().map(Folder::getName).collect(Collectors.joining(", "));
