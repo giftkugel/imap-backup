@@ -13,7 +13,7 @@
         }
         .mails {
             display: grid;
-            grid-template-columns: max-content max-content auto 20% 20% 15%;
+            grid-template-columns: 20% max-content auto 20% 20% 15%;
         }
         .mails > div {
             text-overflow: ellipsis;
@@ -52,8 +52,8 @@
         <div>${mail.folder}</div>
         <div>${mail.date}</div>
         <div><#if mail.link??><a href="${mail.link}">${mail.subject}</a><#else>${mail.subject}</#if></div>
-        <div title="${mail.from}">${mail.from}</div>
-        <div title="${mail.to}">${mail.to}</div>
+        <div>${mail.from}</div>
+        <div>${mail.to}</div>
         <#if mail.attachments??><div title="${mail.attachments}">${mail.attachments}</div><#else><div>&nbsp;</div></#if>
         </#items>
     </div>
