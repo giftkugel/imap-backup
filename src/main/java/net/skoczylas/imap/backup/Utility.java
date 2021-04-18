@@ -22,13 +22,13 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
-class Utility {
+public class Utility {
     
     private static final Logger LOGGER = LoggerFactory.getLogger(Utility.class);
 
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-    static Optional<Object> getContent(Message message) {
+    public static Optional<Object> getContent(Message message) {
         try {
             return Optional.ofNullable(message.getContent());
         } catch (MessagingException | IOException exception) {
@@ -38,7 +38,7 @@ class Utility {
         return Optional.empty();
     }
 
-    static Optional<Object> getContent(Part part) {
+    public static Optional<Object> getContent(Part part) {
         try {
             return Optional.ofNullable(part.getContent());
         } catch (MessagingException | IOException exception) {
@@ -48,7 +48,7 @@ class Utility {
         return Optional.empty();
     }
 
-    static int getCount(MimeMultipart mimeMultipart) {
+    public static int getCount(MimeMultipart mimeMultipart) {
         try {
             return mimeMultipart.getCount();
         } catch (MessagingException exception) {
@@ -57,7 +57,7 @@ class Utility {
         return  0;
     }
 
-    static List<MailAddress> getAddresses(Address... addresses) {
+    public static List<MailAddress> getAddresses(Address... addresses) {
         if (addresses != null) {
             return Arrays.stream(addresses)
                     .filter(Objects::nonNull)
@@ -71,7 +71,7 @@ class Utility {
         }
     }
 
-    static Optional<MimeType> getMimeType(String contentType) {
+    public static Optional<MimeType> getMimeType(String contentType) {
         try {
             return Optional.of(new MimeType(contentType));
         } catch (MimeTypeParseException exception) {
@@ -80,7 +80,7 @@ class Utility {
         }
     }
 
-    static Optional<String> getSubject(Message message) {
+    public static Optional<String> getSubject(Message message) {
         try {
             if (StringUtils.isNotBlank(message.getSubject())) {
                 return Optional.ofNullable(MimeUtility.decodeText(message.getSubject()));
@@ -93,7 +93,7 @@ class Utility {
     }
 
 
-    static Optional<String> getFileName(MimeType mimeType) {
+    public static Optional<String> getFileName(MimeType mimeType) {
         if (mimeType == null) {
             return Optional.empty();
         }
@@ -120,13 +120,13 @@ class Utility {
         return Optional.empty();
     }
 
-    static LocalDateTime convertToLocalDateTimeViaInstant(Date dateToConvert) {
+    public static LocalDateTime convertToLocalDateTimeViaInstant(Date dateToConvert) {
         return dateToConvert.toInstant()
                 .atZone(ZoneId.systemDefault())
                 .toLocalDateTime();
     }
 
-    static String getDate(LocalDateTime localDateTime) {
+    public static String getDate(LocalDateTime localDateTime) {
         return FORMATTER.format(localDateTime);
     }
 

@@ -64,7 +64,7 @@ class Writer {
                 executorService.submit(() -> writeStream(content, file));
             }
         } catch (IOException exception) {
-            LOGGER.error("Could not write {}: {}", fileName, exception.getMessage());
+            LOGGER.error("Could not write {}: {}", fileName, exception);
         }
     }
 
@@ -77,7 +77,7 @@ class Writer {
                 executorService.submit(() -> writeString(content, file));
             }
         } catch (IOException exception) {
-            LOGGER.error("Could not write {}: {}", fileName, exception.getMessage());
+            LOGGER.error("Could not write {}: {}", fileName, exception);
         }
     }
 
@@ -90,7 +90,7 @@ class Writer {
                 getMailInfoFromTemplate(mailInfo).ifPresent(content -> executorService.submit(() -> writeString(content, infoFile)));
             }
         } catch (IOException exception) {
-            LOGGER.error("Could not write mail information: {}", exception.getMessage());
+            LOGGER.error("Could not write mail information: {}", exception);
         }
     }
 
@@ -102,7 +102,7 @@ class Writer {
             Path overviewFile = Paths.get(path.toString(), "mail_index.html");
             getOverFromTemplate().ifPresent(content -> writeString(content, overviewFile, StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING));
         } catch (Exception exception) {
-            LOGGER.error("Could not write mail overview: {}", exception.getMessage());
+            LOGGER.error("Could not write mail overview: {}", exception);
         }
     }
 
@@ -146,7 +146,7 @@ class Writer {
             outStream.flush();
             outStream.close();
         } catch (IOException exception) {
-            LOGGER.error("Could not write file {}: {}", file, exception.getMessage());
+            LOGGER.error("Could not write file {}: {}", file, exception);
         }
     }
 
@@ -158,7 +158,7 @@ class Writer {
         try {
             Files.writeString(file, content, options);
         } catch (IOException exception) {
-            LOGGER.error("Could not write file {}: {}", file, exception.getMessage());
+            LOGGER.error("Could not write file {}: {}", file, exception);
         }
     }
 
@@ -169,7 +169,7 @@ class Writer {
             mailInfoTemplate.process(root, stringWriter);
             return Optional.of(stringWriter.toString());
         } catch (IOException | TemplateException exception) {
-            LOGGER.error("Could generate mail info from template");
+            LOGGER.error("Could generate mail info from template: {}", exception);
         }
 
         return Optional.empty();
@@ -188,7 +188,7 @@ class Writer {
             overviewTemplate.process(root, stringWriter);
             return Optional.of(stringWriter.toString());
         } catch (IOException | TemplateException exception) {
-            LOGGER.error("Could generate overview from template");
+            LOGGER.error("Could generate overview from template: {}", exception);
         }
 
         return Optional.empty();
