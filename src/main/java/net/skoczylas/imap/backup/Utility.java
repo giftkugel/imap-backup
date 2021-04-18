@@ -28,11 +28,15 @@ public class Utility {
 
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
+    private Utility() {
+    }
+
     public static Optional<Object> getContent(Message message) {
         try {
             return Optional.ofNullable(message.getContent());
         } catch (MessagingException | IOException exception) {
-            LOGGER.warn("Could not read content: {}", exception.getMessage());
+            String msg = exception.toString();
+            LOGGER.warn("Could not read content: {}", msg);
         }
 
         return Optional.empty();
@@ -42,7 +46,8 @@ public class Utility {
         try {
             return Optional.ofNullable(part.getContent());
         } catch (MessagingException | IOException exception) {
-            LOGGER.warn("Could not read content of part", exception);
+            String msg = exception.toString();
+            LOGGER.warn("Could not read content of part: {}", msg);
         }
 
         return Optional.empty();
@@ -52,7 +57,8 @@ public class Utility {
         try {
             return mimeMultipart.getCount();
         } catch (MessagingException exception) {
-            LOGGER.warn("Could not determinate amount of parts: {}", exception.getMessage());
+            String msg = exception.toString();
+            LOGGER.warn("Could not determinate amount of parts: {}", msg);
         }
         return  0;
     }
@@ -75,7 +81,8 @@ public class Utility {
         try {
             return Optional.of(new MimeType(contentType));
         } catch (MimeTypeParseException exception) {
-            LOGGER.warn("Could not determinate content type: {}", exception.getMessage());
+            String msg = exception.toString();
+            LOGGER.warn("Could not determinate content type: {}", msg);
             return Optional.empty();
         }
     }
@@ -86,7 +93,8 @@ public class Utility {
                 return Optional.ofNullable(MimeUtility.decodeText(message.getSubject()));
             }
         } catch (MessagingException | UnsupportedEncodingException exception) {
-            LOGGER.warn("Could not read subject: {}", exception.getMessage());
+            String msg = exception.toString();
+            LOGGER.warn("Could not read subject: {}", msg);
         }
 
         return Optional.empty();

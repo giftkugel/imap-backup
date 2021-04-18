@@ -7,10 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
+import java.nio.file.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -31,7 +28,7 @@ class Writer {
     private final String targetFolder;
     private final String backupFolder;
     private final String account;
-    private final ExecutorService executorService = Executors.newFixedThreadPool(10);
+    private final ExecutorService executorService = Executors.newFixedThreadPool(20);
     private final ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(10);
 
     private final Template overviewTemplate;
@@ -42,7 +39,6 @@ class Writer {
         this.targetFolder = targetFolder;
         this.backupFolder = backupFolder;
         this.account = normalize(account);
-
         Configuration configuration = new Configuration(Configuration.VERSION_2_3_31);
         configuration.setClassForTemplateLoading(getClass(), "/");
 
@@ -60,8 +56,8 @@ class Writer {
         try {
             Files.createDirectories(path);
             Path file = Paths.get(path.toString(), normalize(fileName));
-            executorService.submit(() -> writeStream(content, file));
-        } catch (IOException exception) {
+            executorService.submit(() -> writeStream(mailInfo, content, file));
+        } catch (Exception exception) {
             LOGGER.error("Could not write {}: {}", fileName, exception);
         }
     }
@@ -71,8 +67,8 @@ class Writer {
         try {
             Files.createDirectories(path);
             Path file = Paths.get(path.toString(), normalize(fileName));
-            executorService.submit(() -> writeString(content, file));
-        } catch (IOException exception) {
+            executorService.submit(() -> writeString(mailInfo, content, file));
+        } catch (Exception exception) {
             LOGGER.error("Could not write {}: {}", fileName, exception);
         }
     }
@@ -82,9 +78,9 @@ class Writer {
         try {
             Files.createDirectories(path);
             Path infoFile = Paths.get(path.toString(), "mail_info.txt");
-            getMailInfoFromTemplate(mailInfo).ifPresent(content -> executorService.submit(() -> writeString(content, infoFile)));
-        } catch (IOException exception) {
-            LOGGER.error("Could not write mail information: {}", exception.toString());
+            getMailInfoFromTemplate(mailInfo).ifPresent(content -> executorService.submit(() -> writeString(mailInfo, content, infoFile)));
+        } catch (Exception exception) {
+            LOGGER.error("Could not write mail information {}: {}", mailInfo.getNumber(), exception);
         }
     }
 
@@ -94,9 +90,9 @@ class Writer {
             Path path = Paths.get(targetFolder, backupFolder, account);
             Files.createDirectories(path);
             Path overviewFile = Paths.get(path.toString(), "mail_index.html");
-            getOverFromTemplate().ifPresent(content -> writeString(content, overviewFile, StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING));
+            getOverFromTemplate().ifPresent(content -> writeString(null, content, overviewFile, StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING));
         } catch (Exception exception) {
-            LOGGER.error("Could not write mail overview: {}", exception.toString());
+            LOGGER.error("Could not write mail overview for {}: {}", account, exception);
         }
     }
 
@@ -131,29 +127,37 @@ class Writer {
         return folder.toArray(new String[0]);
     }
 
-    private synchronized void writeStream(InputStream inputStream, Path file) {
+    private void writeStream(MailInfo mailInfo, InputStream inputStream, Path file) {
         if (!Files.exists(file)) {
             File targetFile = file.toFile();
             try (OutputStream outStream = new FileOutputStream(targetFile)) {
                 byte[] buffer = inputStream.readAllBytes();
                 outStream.write(buffer);
                 outStream.flush();
+                LOGGER.info("File written for Mail {}: {}", mailInfo.getNumber(), file.getFileName());
             } catch (IOException exception) {
-                LOGGER.error("Could not write file {}: {}", file, exception);
+                LOGGER.error("Could not write stream to file {}: {}", file.getFileName(), exception);
             }
-
+        } else {
+            LOGGER.error("Could not write stream!");
         }
     }
 
-    private void writeString(String content, Path file) {
-        writeString(content, file, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
+    private void writeString(MailInfo mailInfo, String content, Path file) {
+        writeString(mailInfo, content, file, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
     }
 
-    private void writeString(String content, Path file, StandardOpenOption... options) {
+    private void writeString(MailInfo mailInfo, String content, Path file, StandardOpenOption... options) {
         try {
             Files.writeString(file, content, options);
+            if (mailInfo != null) {
+                LOGGER.info("File written for Mail {}: {}", mailInfo.getNumber(), file.getFileName());
+            }
+        } catch (FileAlreadyExistsException exception) {
+            // Nothing to do, was expected
+            LOGGER.debug("File already exists {}: {}", file.getFileName(), exception);
         } catch (IOException | IllegalArgumentException | UnsupportedOperationException | SecurityException exception) {
-            LOGGER.error("Could not write file {}: {}", file, exception);
+            LOGGER.error("Could not write content file {}: {}", file.getFileName(), exception);
         }
     }
 
@@ -164,7 +168,7 @@ class Writer {
             mailInfoTemplate.process(root, stringWriter);
             return Optional.of(stringWriter.toString());
         } catch (IOException | TemplateException exception) {
-            LOGGER.error("Could generate mail info from template: {}", exception.toString());
+            LOGGER.error("Could generate mail info from template", exception);
         }
 
         return Optional.empty();
@@ -183,7 +187,7 @@ class Writer {
             overviewTemplate.process(root, stringWriter);
             return Optional.of(stringWriter.toString());
         } catch (IOException | TemplateException exception) {
-            LOGGER.error("Could generate overview from template: {}", exception.toString());
+            LOGGER.error("Could generate overview from template", exception);
         }
 
         return Optional.empty();
