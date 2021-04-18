@@ -48,7 +48,7 @@ class Writer {
 
     void run() {
         LOGGER.info("Overview writer started...");
-        scheduledExecutorService.scheduleWithFixedDelay(this::write, 10, 10, TimeUnit.SECONDS);
+        scheduledExecutorService.scheduleWithFixedDelay(this::writeOverview, 10, 10, TimeUnit.SECONDS);
     }
 
     void stop() {
@@ -88,7 +88,7 @@ class Writer {
         }
     }
 
-    private void write() {
+    private synchronized void writeOverview() {
         LOGGER.trace("Updating overview for {}", account);
         try {
             Path path = Paths.get(targetFolder, backupFolder, account);
@@ -143,7 +143,7 @@ class Writer {
                 LOGGER.error("Could not write stream to file {}: {}", file.getFileName(), exception);
             }
         } else {
-            LOGGER.error("Could not write stream!");
+            LOGGER.error("Could not write stream because file {}  already exists!", file.getFileName());
         }
     }
 
