@@ -51,6 +51,10 @@ class Writer {
         scheduledExecutorService.scheduleWithFixedDelay(this::write, 10, 10, TimeUnit.SECONDS);
     }
 
+    void stop() {
+        scheduledExecutorService.shutdown();
+    }
+
     void writeToFile(InputStream content, MailInfo mailInfo, String fileName) {
         Path path = getPath(mailInfo);
         try {
@@ -85,7 +89,7 @@ class Writer {
     }
 
     private void write() {
-        LOGGER.info("Updating overview for {}", account);
+        LOGGER.trace("Updating overview for {}", account);
         try {
             Path path = Paths.get(targetFolder, backupFolder, account);
             Files.createDirectories(path);
@@ -134,7 +138,7 @@ class Writer {
                 byte[] buffer = inputStream.readAllBytes();
                 outStream.write(buffer);
                 outStream.flush();
-                LOGGER.info("File written for Mail {}: {}", mailInfo.getNumber(), file.getFileName());
+                LOGGER.trace("File written for Mail {}: {}", mailInfo.getNumber(), file.getFileName());
             } catch (IOException exception) {
                 LOGGER.error("Could not write stream to file {}: {}", file.getFileName(), exception);
             }
@@ -151,7 +155,7 @@ class Writer {
         try {
             Files.writeString(file, content, options);
             if (mailInfo != null) {
-                LOGGER.info("File written for Mail {}: {}", mailInfo.getNumber(), file.getFileName());
+                LOGGER.trace("File written for Mail {}: {}", mailInfo.getNumber(), file.getFileName());
             }
         } catch (FileAlreadyExistsException exception) {
             // Nothing to do, was expected

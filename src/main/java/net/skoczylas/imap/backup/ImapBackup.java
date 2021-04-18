@@ -54,6 +54,7 @@ public class ImapBackup {
 
                 LOGGER.info("Closing store");
                 store.close();
+                writer.stop();
             } catch (MessagingException exception) {
                 LOGGER.error("Failed: {}", exception.getMessage());
             }
