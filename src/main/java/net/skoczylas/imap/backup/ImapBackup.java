@@ -68,6 +68,12 @@ public class ImapBackup {
                 folder.open(Folder.READ_ONLY);
             }
             folderNames.addLast(folder.getName());
+
+            LOGGER.info("Reading folder {}", folder.getName());
+            List<Message> messages = Arrays.asList(folder.getMessages());
+
+            messages.forEach(message -> readMessage(folderNames, (MimeMessage) message));
+
             List<Folder> subFolders = Arrays.asList(folder.list());
             if (!subFolders.isEmpty()) {
                 String subFolderNames = subFolders.stream().map(Folder::getName).collect(Collectors.joining(", "));
@@ -75,10 +81,6 @@ public class ImapBackup {
                 subFolders.forEach(subFolder -> readFolder(subFolder, folderNames));
             }
 
-            LOGGER.info("Reading folder {}", folder.getName());
-            List<Message> messages = Arrays.asList(folder.getMessages());
-
-            messages.forEach(message -> readMessage(folderNames, (MimeMessage) message));
             folderNames.removeLast();
         } catch (MessagingException exception) {
             LOGGER.error("Could not read folder {}: {}", folder.getName(), exception.getMessage());
@@ -104,7 +106,10 @@ public class ImapBackup {
                 String fromAddress = mailInfo.getFrom().stream().findFirst().map(MailAddress::getValidAddress).orElse("Unknown");
                 String folder = String.join("/", parents);
                 Utility.getContent(message)
-                        .ifPresent(content -> readContent(content, mimeType, mailInfo));
+                        .ifPresent(content -> {
+                            readContent(content, mimeType, mailInfo);
+                            writer.writeInfoFile(mailInfo);
+                        });
                 if (mailInfo.getAttachments().isEmpty()) {
                     LOGGER.info("Message {}, {}, {}, subject={}, from={}", mailCount, Utility.getDate(mailInfo.getReceivedAt()), folder, mailInfo.getSubject(), fromAddress);
                 } else {
@@ -127,7 +132,6 @@ public class ImapBackup {
             return;
         }
         LOGGER.debug("Reading content with type={}", mimeType);
-        writer.writeInfoFile(mailInfo);
         if (content instanceof MimeMultipart) {
             handleMultipart((MimeMultipart) content, mailInfo);
         } else if (content instanceof BASE64DecoderStream) {
@@ -161,16 +165,16 @@ public class ImapBackup {
             .filter(StringUtils::isNotBlank)
             .ifPresentOrElse(fileName -> {
                 LOGGER.debug("Downloading attachment: {}", fileName);
-                mailInfo.addAttachment(fileName);
-                writer.writeToFile(base64DecoderStream, mailInfo, fileName);
+                String validFileName = addAttachment(mailInfo, fileName);
+                writer.writeToFile(base64DecoderStream, mailInfo, validFileName);
             }, () -> {
                 MimeTypes allTypes = MimeTypes.getDefaultMimeTypes();
                 try {
                     org.apache.tika.mime.MimeType detectedMimeType = allTypes.forName(mimeType.getBaseType());
                     String fileName = UUID.randomUUID() + detectedMimeType.getExtension();
                     LOGGER.debug("Downloading unnamed attachment: {}", fileName);
-                    mailInfo.addAttachment(fileName);
-                    writer.writeToFile(base64DecoderStream, mailInfo, fileName);
+                    String validFileName = addAttachment(mailInfo, fileName);
+                    writer.writeToFile(base64DecoderStream, mailInfo, validFileName);
                 } catch (MimeTypeException exception) {
                     LOGGER.warn("Skipped unnamed attachment, type: {}, because: {}", mimeType, exception.getMessage());
                 }
@@ -185,8 +189,8 @@ public class ImapBackup {
                 .ifPresentOrElse(fileName -> {
                     try {
                         LOGGER.debug("Downloading nested E-Mail: {}", fileName);
-                        mailInfo.addAttachment(fileName);
-                        readContent(imapNestedMessage.getContent(), nestedMimeType, mailInfo, fileName);
+                        String validFileName = addAttachment(mailInfo, fileName);
+                        readContent(imapNestedMessage.getContent(), nestedMimeType, mailInfo, validFileName);
                     } catch (IOException | MessagingException exception) {
                         LOGGER.error("Failed", exception);
                     }
@@ -196,8 +200,8 @@ public class ImapBackup {
                         org.apache.tika.mime.MimeType detectedMimeType = allTypes.forName(nestedMimeType.getBaseType());
                         String fileName = UUID.randomUUID() + detectedMimeType.getExtension();
                         LOGGER.debug("Downloading unnamed nested E-Mail: {}", fileName);
-                        mailInfo.addAttachment(fileName);
-                        readContent(imapNestedMessage.getContent(), nestedMimeType, mailInfo, fileName);
+                        String validFileName = addAttachment(mailInfo, fileName);
+                        readContent(imapNestedMessage.getContent(), nestedMimeType, mailInfo, validFileName);
                     } catch (IOException | MessagingException | MimeTypeException exception) {
                         LOGGER.warn("Skipped unnamed content, type: {}, because: {}", mimeType, exception.getMessage());
                     }
@@ -217,21 +221,33 @@ public class ImapBackup {
             .filter(StringUtils::isNotBlank)
             .ifPresentOrElse(fileName -> {
                 LOGGER.debug("Downloading named content: {}, {}", fileName, mimeType);
-                mailInfo.addAttachment(fileName);
-                writer.writeToFile(contentText, mailInfo, fileName);
+                String validFileName = addAttachment(mailInfo, fileName);
+                writer.writeToFile(contentText, mailInfo, validFileName);
             }, () -> {
                 MimeTypes allTypes = MimeTypes.getDefaultMimeTypes();
                 try {
                     org.apache.tika.mime.MimeType detectedMimeType = allTypes.forName(mimeType.getBaseType());
                     String fileName = UUID.randomUUID() + detectedMimeType.getExtension();
                     LOGGER.debug("Downloading unnamed content: {}", fileName);
-                    mailInfo.addAttachment(fileName);
-                    writer.writeToFile(contentText, mailInfo, fileName);
+                    String validFileName = addAttachment(mailInfo, fileName);
+                    writer.writeToFile(contentText, mailInfo, validFileName);
                 } catch (MimeTypeException exception) {
                     LOGGER.warn("Skipped unnamed content, type: {}, because: {}", mimeType, exception.getMessage());
                 }
             });
     }
 
+    private String addAttachment(MailInfo mailInfo, String fileName) {
+        String validFileName = getValidAttachmentName(mailInfo, fileName);
+        mailInfo.addAttachment(validFileName);
+        return validFileName;
+    }
+
+    private String getValidAttachmentName(MailInfo mailInfo, String fileName) {
+        if (mailInfo.getAttachments().contains(fileName)) {
+            return String.format("%s_%s", mailInfo.getAttachments().size(), fileName);
+        }
+        return fileName;
+    }
 
 }

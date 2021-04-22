@@ -42,7 +42,7 @@ class Writer {
         Configuration configuration = new Configuration(Configuration.VERSION_2_3_31);
         configuration.setClassForTemplateLoading(getClass(), "/");
 
-        overviewTemplate = configuration.getTemplate("overview.ftlh");
+        overviewTemplate = configuration.getTemplate("overview-table.ftlh");
         mailInfoTemplate = configuration.getTemplate("mail-info.ftlh");
     }
 
@@ -199,6 +199,7 @@ class Writer {
 
     private Map<String, String> toMap(MailInfo mailInfo) {
         Map<String, String> root = new HashMap<>();
+        root.put("number", String.valueOf(mailInfo.getNumber()));
         root.put("subject", mailInfo.getSubject());
         root.put("date", Utility.getDate(mailInfo.getReceivedAt()));
         root.put("from", mailInfo.getFrom().stream().map(MailAddress::toString).collect(Collectors.joining(", ")));
