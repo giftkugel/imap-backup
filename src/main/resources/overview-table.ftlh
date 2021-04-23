@@ -11,12 +11,18 @@
         h1, p {
             padding: 0 1rem;
         }
-        .mails > div {
+
+        .mails table {
+            width: 100%;
+        }
+
+        .mails td {
             text-overflow: ellipsis;
             white-space: nowrap;
             overflow: hidden;
             padding: 0.25rem 0.5rem;
         }
+
         .mails .header {
             font-size: 1.25rem;
             font-weight: bold;

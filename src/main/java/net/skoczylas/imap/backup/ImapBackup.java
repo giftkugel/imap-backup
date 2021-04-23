@@ -27,9 +27,9 @@ public class ImapBackup {
     private Store store;
     private int mailCount = 0;
 
-    public ImapBackup(Session session, String username, String password) throws IOException {
+    public ImapBackup(Session session, String output, String template, String username, String password) throws IOException {
         this.mailQueue = new ArrayList<>();
-        this.writer = new Writer(mailQueue, System.getProperty("user.home"), "imapBackup", username);
+        this.writer = new Writer(mailQueue, output, "imapBackup", username, template);
 
         try {
             this.store = session.getStore("imap");
@@ -52,8 +52,6 @@ public class ImapBackup {
 
                 folders.forEach(folder -> readFolder(folder, new ArrayDeque<>()));
 
-                LOGGER.info("Closing store");
-                store.close();
                 writer.stop();
             } catch (MessagingException exception) {
                 LOGGER.error("Failed: {}", exception.getMessage());

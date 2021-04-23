@@ -21,9 +21,9 @@ dependencies {
     implementation "org.apache.commons:commons-lang3:${apacheCommonsVersion}"
     implementation "commons-codec:commons-codec:${commonCodecVersion}"
     implementation "commons-io:commons-io:${commonsIOVersion}"
+    implementation "commons-cli:commons-cli:${apacheCliVersion}"
     implementation "org.apache.tika:tika-core:${tikaCoreVersion}"
     implementation "org.freemarker:freemarker:${freeMarkerVersion}"
-
     implementation "com.sun.mail:jakarta.mail:${jakartaMailVersion}"
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:${jUnitVersion}"

@@ -34,7 +34,7 @@ class Writer {
     private final Template overviewTemplate;
     private final Template mailInfoTemplate;
 
-    public Writer(List<MailInfo> mailQueue, String targetFolder, String backupFolder, String account) throws IOException {
+    public Writer(List<MailInfo> mailQueue, String targetFolder, String backupFolder, String account, String template) throws IOException {
         this.mailQueue = mailQueue;
         this.targetFolder = targetFolder;
         this.backupFolder = backupFolder;
@@ -42,7 +42,11 @@ class Writer {
         Configuration configuration = new Configuration(Configuration.VERSION_2_3_31);
         configuration.setClassForTemplateLoading(getClass(), "/");
 
-        overviewTemplate = configuration.getTemplate("overview-table.ftlh");
+        if ("grid".equalsIgnoreCase(template)) {
+            overviewTemplate = configuration.getTemplate("overview-grid.ftlh");
+        } else {
+            overviewTemplate = configuration.getTemplate("overview-table.ftlh");
+        }
         mailInfoTemplate = configuration.getTemplate("mail-info.ftlh");
     }
 
@@ -53,6 +57,7 @@ class Writer {
 
     void stop() {
         scheduledExecutorService.shutdown();
+        executorService.shutdown();
     }
 
     void writeToFile(InputStream content, MailInfo mailInfo, String fileName) {
