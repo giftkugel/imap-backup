@@ -15,6 +15,9 @@ repositories {
 sourceCompatibility = 11
 targetCompatibility = 11
 
+compileJava.options.encoding = "UTF-8"
+compileTestJava.options.encoding = "UTF-8"
+
 dependencies {
     implementation "org.slf4j:slf4j-api:${slf4jVersion}"
     implementation "org.slf4j:slf4j-simple:${slf4jVersion}"
@@ -31,7 +34,7 @@ dependencies {
 }
 
 graal {
-    graalVersion("21.0.0.2")
+    graalVersion("21.1.0")
     javaVersion("11")
 
     windowsVsVersion("2019")
@@ -39,7 +42,12 @@ graal {
 
     mainClass("net.skoczylas.imap.backup.Application")
     outputName("imap-backup")
+    option("--verbose")
     option("--no-fallback")
     option("--no-server")
+    option("-H:+ReportExceptionStackTraces")
+    option("--features=org.graalvm.home.HomeFinderFeature")
+    option("--initialize-at-run-time=freemarker.log")
+    option('-H:IncludeResources=.*/*.ftlh$,*/*.properties$,*/freemarker/*.properties$')
     option("--allow-incomplete-classpath")
 }
