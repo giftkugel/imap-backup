@@ -183,7 +183,7 @@ class Writer {
         return Optional.empty();
     }
 
-    private Optional<String> getOverFromTemplate() {
+    private synchronized Optional<String> getOverFromTemplate() {
         try {
             Map<String, Object> root = new HashMap<>();
             List<Map<String, String>> mails = mailQueue.stream()
